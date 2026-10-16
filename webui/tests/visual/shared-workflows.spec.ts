@@ -167,6 +167,66 @@ for (const account of [
   }
 }
 
+for (const source of ['tidal', 'qobuz']) {
+  test(`${source} account refresh mirrors tracks and reopens discovery`, async ({ page }) => {
+    let mirrored: Record<string, unknown> | undefined;
+    const playlist = {
+      id: 'account-2',
+      name: 'Evening selection',
+      track_count: 1,
+      tracks: [
+        {
+          id: 'track-1',
+          name: 'Windowlicker',
+          artists: ['Aphex Twin'],
+          album: 'Windowlicker',
+          duration_ms: 367000,
+        },
+      ],
+    };
+    const missing = await open(page, '/sync', [
+      http.get(`*/api/${source}/playlists`, () => HttpResponse.json([playlist])),
+      http.get(`*/api/${source}/playlists/states`, () => HttpResponse.json({ states: [] })),
+      http.post('*/api/mirror-playlist', async ({ request }) => {
+        mirrored = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ success: true, playlist_id: 42 });
+      }),
+    ]);
+    await page.getByRole('button', { name: '+ Add playlist', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Add a playlist' })
+      .getByRole('button', {
+        name: source === 'tidal' ? 'Tidal' : 'Qobuz',
+        exact: true,
+      })
+      .click();
+    await page.locator(`#${source}-refresh-btn`).click();
+    await expect
+      .poll(() => mirrored)
+      .toMatchObject({
+        source,
+        name: playlist.name,
+        tracks: [
+          {
+            track_name: 'Windowlicker',
+            artist_name: 'Aphex Twin',
+            duration_ms: 367000,
+          },
+        ],
+      });
+    const card = page.locator(`#${source}-card-account-2`);
+    await card.click();
+    const modal = page.locator(`.youtube-discovery-modal[data-source="${source}"]`);
+    await expect(modal).toBeVisible();
+    await expect(modal.getByRole('row').filter({ hasText: 'Windowlicker' })).toBeVisible();
+    await modal.getByRole('button', { name: /Close/, exact: false }).last().click();
+    await expect(modal).not.toBeVisible();
+    await card.click();
+    await expect(modal).toBeVisible();
+    expect(missing).toEqual([]);
+  });
+}
+
 for (const account of ['ListenBrainz', 'Last.fm', 'SoulSync Discovery']) {
   test(`browses ${account} account playlists`, async ({ page }) => {
     const title = `${account} selection`;
