@@ -9,12 +9,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  DEEZER_PLAYLIST_PROGRESS_EVENT,
-  SYNC_LOGS_EVENT,
-  deezerProgressLabel,
-  useSyncLogsEvent,
-} from './-sync.events';
+import { SYNC_LOGS_EVENT, deezerProgressLabel, useSyncLogsEvent } from './-sync.events';
 
 describe('the vanilla half of the seam', () => {
   /**

@@ -7,7 +7,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AutoSyncHourlyEntry, AutoSyncWeeklyEntry, MirroredRow } from '../-sync.autosync';
-import type { AutoSyncWeeklyBoardActions, AutoSyncWeeklyDraft } from './autosync-weekly';
+import type { AutoSyncWeeklyBoardActions } from './autosync-weekly';
 
 import {
   AutoSyncWeeklyBoard,

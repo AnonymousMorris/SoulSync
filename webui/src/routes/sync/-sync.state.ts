@@ -322,10 +322,6 @@ export function applyFixedMatch(
   };
 
   const spotifyMatches = wasNotFound ? (state.spotifyMatches || 0) + 1 : state.spotifyMatches;
-  const total =
-    state.spotifyTotal ||
-    (Array.isArray(state.playlist?.tracks) ? (state.playlist.tracks as unknown[]).length : 0);
-
   return {
     ...state,
     rawResults,
@@ -334,8 +330,7 @@ export function applyFixedMatch(
     // discoveryProgress deliberately untouched: it is the SCAN percent. the
     // vanilla overwrote it with a match ratio here (unclamped - "105/100,
     // over 100%"), which the display now derives itself, clamped, in
-    // matchLineNumbers. total stays computed above for parity with the
-    // vanilla's guard even though nothing else reads it now.
+    // matchLineNumbers.
     discoveryProgress: state.discoveryProgress,
   };
 }

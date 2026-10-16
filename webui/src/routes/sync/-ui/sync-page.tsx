@@ -18,7 +18,7 @@
  * `ServerCompareEditor` had no mount site anywhere before this file.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import type { MirroredMatch, ServerPlaylist } from '../-sync.server';
 import type { SyncTabId } from '../-sync.shell';
