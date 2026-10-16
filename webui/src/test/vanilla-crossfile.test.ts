@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -34,8 +34,6 @@ const PORT_FILES = [
 const EXPECTED_EDGES = [
   'applyProgressiveTrackRendering <- downloads.js,shared-helpers.js [sync-spotify.js]',
   'autoSavePlaylistM3U <- downloads.js [sync-spotify.js]',
-  // the five cleanupBeatport*Slider <- core.js edges are gone: beatport-ui.js
-  // was deleted and core.js's page-leave teardown stopped calling them.
   'cleanupDownloadProcess <- downloads.js [sync-spotify.js]',
   'cleanupWishlist <- downloads.js [sync-services.js]',
   'clearWishlist <- downloads.js [sync-services.js]',
@@ -140,7 +138,7 @@ describe('calls that cross out of the files the sync port deletes', () => {
     ).toEqual({ missing: [], added: [] });
   });
 
-  it('keeps the Settings pickers OUT of beatport-ui.js', () => {
+  it('keeps the Settings pickers outside the remaining sync scripts', () => {
     // This used to assert the opposite — that these functions sat in
     // beatport-ui.js — because that was the reality and the point was to make
     // the flip trip over it. They have now been re-homed into settings.js,
@@ -152,10 +150,10 @@ describe('calls that cross out of the files the sync port deletes', () => {
     // becomes deletable-by-association.
     const dir = resolve(process.cwd(), 'static');
     const settings = readFileSync(resolve(dir, 'settings.js'), 'utf8');
-    // beatport-ui.js is deleted now; if it ever comes back it still must not
-    // take the pickers with it.
-    const beatportPath = resolve(dir, 'beatport-ui.js');
-    const beatport = existsSync(beatportPath) ? readFileSync(beatportPath, 'utf8') : '';
+    const files = readdirSync(dir);
+    const syncSources = PORT_FILES.filter((file) => files.includes(file))
+      .map((file) => readFileSync(resolve(dir, file), 'utf8'))
+      .join('\n');
     for (const name of [
       'loadPlexMusicLibraries',
       'selectPlexLibrary',
@@ -169,7 +167,7 @@ describe('calls that cross out of the files the sync port deletes', () => {
       expect(settings, `${name} should be defined in settings.js`).toContain(
         `async function ${name}(`,
       );
-      expect(beatport, `${name} must not be back in beatport-ui.js`).not.toContain(
+      expect(syncSources, `${name} must remain outside the sync scripts`).not.toContain(
         `function ${name}(`,
       );
     }
@@ -226,5 +224,11 @@ describe('calls that cross out of the files the sync port deletes', () => {
     ]) {
       expect(core).not.toMatch(new RegExp(`\\b${name}\\s*\\(`));
     }
+  });
+
+  it('keeps the retired Beatport script out of the page and source tree', () => {
+    expect(readdirSync(resolve(process.cwd(), 'static'))).not.toContain('beatport-ui.js');
+    const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
+    expect(html).not.toMatch(/filename=['"]beatport-ui\.js['"]/);
   });
 });
