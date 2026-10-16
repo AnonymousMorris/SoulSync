@@ -21,11 +21,6 @@ import { extractFunction } from './vanilla-extract';
 const JS = readFileSync(resolve(process.cwd(), 'static/chat.js'), 'utf8');
 const HTML = readFileSync(resolve(process.cwd(), '../webui/index.html'), 'utf8');
 
-function fn(name: string, deps = '') {
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval
-  return new Function(`${deps}${extractFunction(name, JS)}; return ${name};`)();
-}
-
 type St = {
   view: string;
   ssOnly: boolean;
@@ -34,8 +29,6 @@ type St = {
   room?: string;
   homeRoom?: string;
 };
-const plainOn = fn('_plainOn', 'var state;\n') as unknown as () => boolean;
-
 function withState(st: St): boolean {
   // _plainOn closes over `state` and leans on _chanRoom + the default channel
   // (#bugs only exists inside the envelope); rebuild them with the state we want

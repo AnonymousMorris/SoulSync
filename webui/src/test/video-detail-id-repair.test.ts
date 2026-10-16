@@ -76,8 +76,6 @@ describe('repairing a missing id from the health band', () => {
 });
 
 describe('the manage panel honours a focused service', () => {
-  type Focus = { state: Record<string, unknown> | null; applyFocusMatch: () => void };
-
   function loadFocus(svc: string | null, host: HTMLElement) {
     const preamble = `
       var MATCH_LABELS = { tmdb: 'TMDB', tvdb: 'TVDB', imdb: 'IMDb' };

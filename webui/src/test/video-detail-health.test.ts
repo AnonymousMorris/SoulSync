@@ -127,7 +127,7 @@ describe('the detail health band', () => {
   });
 
   it('keeps youtube channel diagnostics out of the hero', () => {
-    const { host, chips: c } = band({
+    const { host } = band({
       kind: 'channel',
       source: 'youtube',
       id: 'UCabc',
