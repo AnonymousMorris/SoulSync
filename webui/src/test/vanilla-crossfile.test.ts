@@ -226,9 +226,15 @@ describe('calls that cross out of the files the sync port deletes', () => {
     }
   });
 
-  it('keeps the retired Beatport script out of the page and source tree', () => {
-    expect(readdirSync(resolve(process.cwd(), 'static'))).not.toContain('beatport-ui.js');
+  it.each([
+    'beatport-ui.js',
+    'sync-listenbrainz.js',
+    'sync-lastfm.js',
+    'sync-soulsync-discovery.js',
+  ])('keeps retired %s out of the page and source tree', (file) => {
+    expect(readdirSync(resolve(process.cwd(), 'static'))).not.toContain(file);
     const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
-    expect(html).not.toMatch(/filename=['"]beatport-ui\.js['"]/);
+    expect(html).not.toContain(`filename='${file}'`);
+    expect(html).not.toContain(`filename="${file}"`);
   });
 });
