@@ -70,7 +70,7 @@ describe('WatchlistAddModal', () => {
     const calls: string[] = [];
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      vi.fn(async (input: RequestInfo | URL) => {
         calls.push(String(input));
         return new Response(JSON.stringify({ success: true, message: 'Added.' }));
       }),

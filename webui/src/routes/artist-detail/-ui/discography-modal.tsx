@@ -9,7 +9,6 @@ import type {
   DiscogModalData,
   DiscogRelease,
   DiscogTotals,
-  FailedRelease,
   FutureReleases,
 } from '../-artist-detail.discography-modal';
 import type { Discography } from '../-artist-detail.types';

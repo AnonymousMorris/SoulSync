@@ -1,5 +1,3 @@
-import type { ShellBridge } from '@/platform/shell/bridge';
-
 import type { ArtistDetailTrack } from './-artist-detail.types';
 
 /**

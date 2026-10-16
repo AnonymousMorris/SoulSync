@@ -13,7 +13,7 @@ afterEach(() => {
 
 describe('visibleIdBadgeSources', () => {
   it('filters on svc, not key — the wrong id field silently disables it', () => {
-    const filter = vi.fn((items, idKey) => items);
+    const filter = vi.fn((items) => items);
     window.filterJiosaavnServiceEntries = filter as never;
     visibleIdBadgeSources();
     expect(filter).toHaveBeenCalledWith(expect.anything(), 'svc');
