@@ -20,6 +20,50 @@ test.afterEach(async ({ page }) => {
   expect(await page.pageErrors()).toEqual([]);
 });
 
+test('dashboard Auto Sync stays React-owned after running from playlist details', async ({ page }) => {
+  let runs = 0;
+  let statusReads = 0;
+  const playlist = {
+    id: 42,
+    name: 'Evening mix',
+    source: 'tidal',
+    source_playlist_id: 'evening-1',
+    track_count: 1,
+    pipeline_state: { status: 'finished', progress: 100 },
+    tracks: [{ track_name: 'Windowlicker', artist_name: 'Aphex Twin', duration_ms: 367000 }],
+  };
+  const missing = await open(page, '/', [
+    http.get('*/api/mirrored-playlists', () => HttpResponse.json([playlist])),
+    http.get('*/api/mirrored-playlists/42', () => HttpResponse.json(playlist)),
+    http.get('*/api/automations', () => HttpResponse.json([])),
+    http.get('*/api/playlist-pipeline/history', () => HttpResponse.json({ history: [], total: 0 })),
+    http.post('*/api/mirrored-playlists/42/pipeline/run', async ({ request }) => {
+      expect(await request.json()).toEqual({ skip_wishlist: false });
+      runs += 1;
+      return HttpResponse.json({ state: { status: 'running', progress: 0 } });
+    }),
+    http.get('*/api/mirrored-playlists/42/pipeline/status', () => {
+      statusReads += 1;
+      return HttpResponse.json({ status: 'running', progress: 25, phase: 'Discovering' });
+    }),
+  ]);
+  await page.locator('article').filter({ hasText: 'Playlist sync' })
+    .getByRole('button', { name: 'Manage', exact: true }).click();
+  const manager = page.locator('#auto-sync-schedule-modal');
+  await expect(manager.locator('.auto-sync-eyebrow')).toHaveCount(0);
+  await manager.getByRole('button', { name: 'Details', exact: true }).click();
+  const details = page.locator('#mirrored-track-modal');
+  await expect(details.getByText('Windowlicker', { exact: true })).toBeVisible();
+  await details.getByRole('button', { name: 'Auto-Sync', exact: true }).click();
+  await expect.poll(() => runs).toBe(1);
+  await expect.poll(() => statusReads).toBeGreaterThan(0);
+  await expect(manager.locator('.auto-sync-eyebrow')).toHaveCount(0);
+  await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+  await manager.locator('.auto-sync-close').click();
+  await expect(manager).not.toBeVisible();
+  expect(missing).toEqual([]);
+});
+
 test('imports a CSV through the Sync file picker', async ({ page }) => {
   let payload: Record<string, unknown> | undefined;
   const missing = await open(page, '/sync', [
