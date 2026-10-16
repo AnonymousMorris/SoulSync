@@ -54,13 +54,7 @@ export function trackArtistLabel(track: ArtistDetailTrack, artistName: string): 
 }
 
 /** Last.fm playcounts: 1.2M / 3.4K / 999, with a trailing ".0" trimmed. */
-export function formatPlaycount(n: unknown): string {
-  const value = Number(n);
-  if (!value || value <= 0) return '0';
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-  return value.toLocaleString();
-}
+export { formatCompactCount as formatPlaycount } from '@/platform/display-format';
 
 /**
  * Pass 1 then pass 2. Returns EMPTY_TOP_TRACKS when neither produced rows,

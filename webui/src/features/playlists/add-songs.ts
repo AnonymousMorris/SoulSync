@@ -103,8 +103,4 @@ export function candidatesFromRecent(
 }
 
 /** "3:49", or '' when the length is unknown. */
-export function songDuration(ms: number | undefined): string {
-  if (!ms || ms <= 0) return '';
-  const total = Math.round(ms / 1000);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
+export { formatRoundedDurationMs as songDuration } from '@/platform/display-format';

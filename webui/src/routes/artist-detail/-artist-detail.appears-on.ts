@@ -119,8 +119,4 @@ export function queueRow(track: AppearsOnTrack, pageArtist: string) {
 }
 
 /** m:ss from milliseconds, blank when unknown. */
-export function formatDuration(ms: number | null | undefined): string {
-  if (!ms || ms <= 0) return '';
-  const total = Math.round(ms / 1000);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
+export { formatRoundedDurationMs as formatDuration } from '@/platform/display-format';
