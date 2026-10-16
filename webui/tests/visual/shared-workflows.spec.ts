@@ -65,82 +65,106 @@ test('imports a CSV through the Sync file picker', async ({ page }) => {
   expect(missing).toEqual([]);
 });
 
-for (const running of [false, true]) {
-  test(`account download handoff reopens with a running job: ${running}`, async ({ page }) => {
-    let starts = 0;
-    const tracks = [
-      {
-        id: 'track-1',
-        name: 'Windowlicker',
-        artists: [{ name: 'Aphex Twin' }],
-        album: { name: 'Windowlicker' },
-        duration_ms: 367000,
-      },
-    ];
-    const playlist = {
-      id: 'account-1',
-      name: 'Evening playlist',
-      owner: 'Admin',
-      track_count: 1,
-      tracks,
-    };
-    const missing = await open(page, '/sync', [
-      http.get('*/api/spotify/playlists', () => HttpResponse.json([playlist])),
-      http.get('*/api/spotify/playlist/account-1', () => HttpResponse.json(playlist)),
-      http.post('*/api/playlists/account-1/start-missing-process', () => {
-        starts += 1;
-        return HttpResponse.json({ success: true, batch_id: 'batch-1' });
-      }),
-      http.get('*/api/download_status/batch', () =>
-        HttpResponse.json({
-          batches: { 'batch-1': { phase: 'queued', analysis_progress: { total: 1 }, tasks: [] } },
+for (const account of [
+  {
+    name: 'Spotify',
+    id: 'account-1',
+    playlistId: 'account-1',
+    list: '/api/spotify/playlists',
+    detail: '/api/spotify/playlist/account-1',
+    container: '#spotify-playlist-container',
+    modal: '#playlist-details-modal',
+  },
+  {
+    name: 'Deezer',
+    id: 7,
+    playlistId: 'deezer_arl_7',
+    list: '/api/deezer/arl-playlists',
+    detail: '/api/deezer/arl-playlist/7',
+    container: '#deezer-arl-playlist-container',
+    modal: '#deezer-arl-playlist-details-modal',
+  },
+]) {
+  for (const running of [false, true]) {
+    test(`${account.name} download handoff reopens with a running job: ${running}`, async ({
+      page,
+    }) => {
+      let starts = 0;
+      const tracks = [
+        {
+          id: 'track-1',
+          name: 'Windowlicker',
+          artists: [{ name: 'Aphex Twin' }],
+          album: { name: 'Windowlicker' },
+          duration_ms: 367000,
+        },
+      ];
+      const playlist = {
+        id: account.id,
+        name: 'Evening playlist',
+        owner: 'Admin',
+        track_count: 1,
+        tracks,
+      };
+      const missing = await open(page, '/sync', [
+        http.get(`*${account.list}`, () => HttpResponse.json([playlist])),
+        http.get(`*${account.detail}`, () => HttpResponse.json(playlist)),
+        http.get('*/api/deezer/arl-status', () => HttpResponse.json({ authenticated: true })),
+        http.post(`*/api/playlists/${account.playlistId}/start-missing-process`, () => {
+          starts += 1;
+          return HttpResponse.json({ success: true, batch_id: 'batch-1' });
         }),
-      ),
-    ]);
-    await page.getByRole('button', { name: '+ Add playlist', exact: true }).click();
-    await page
-      .getByRole('dialog', { name: 'Add a playlist' })
-      .getByRole('button', { name: 'Spotify', exact: true })
-      .click();
-    await page
-      .locator('#spotify-playlist-container')
-      .getByRole('button', { name: 'Sync / Download', exact: true })
-      .click();
-    await expect(page.locator('#playlist-details-modal')).toBeVisible();
-    await page
-      .locator('#playlist-details-modal')
-      .getByRole('button', { name: /Download Missing Tracks/ })
-      .click();
-    const modal = page.locator('#download-missing-modal-account-1');
-    await expect(modal).toBeVisible();
-    await expect(modal.getByRole('row').filter({ hasText: 'Windowlicker' })).toBeVisible();
-    if (running) {
-      await modal.getByRole('button', { name: 'Begin Analysis', exact: true }).click();
-      await expect.poll(() => starts).toBe(1);
-      await expect(modal.getByRole('button', { name: 'Cancel All', exact: true })).toBeVisible();
-    }
-    await modal.getByRole('button', { name: 'Close', exact: true }).click();
-    await expect(modal).not.toBeVisible();
-    if (running) {
+        http.get('*/api/download_status/batch', () =>
+          HttpResponse.json({
+            batches: { 'batch-1': { phase: 'queued', analysis_progress: { total: 1 }, tasks: [] } },
+          }),
+        ),
+      ]);
+      await page.getByRole('button', { name: '+ Add playlist', exact: true }).click();
       await page
-        .locator('#spotify-playlist-container')
-        .getByRole('button', { name: 'View Progress', exact: true })
+        .getByRole('dialog', { name: 'Add a playlist' })
+        .getByRole('button', { name: account.name, exact: true })
         .click();
-      await expect(modal.getByRole('button', { name: 'Cancel All', exact: true })).toBeVisible();
-      expect(starts).toBe(1);
-    } else {
       await page
-        .locator('#spotify-playlist-container')
+        .locator(account.container)
         .getByRole('button', { name: 'Sync / Download', exact: true })
         .click();
+      await expect(page.locator(account.modal)).toBeVisible();
       await page
-        .locator('#playlist-details-modal')
+        .locator(account.modal)
         .getByRole('button', { name: /Download Missing Tracks/ })
         .click();
-    }
-    await expect(modal).toBeVisible();
-    expect(missing).toEqual([]);
-  });
+      const modal = page.locator(`#download-missing-modal-${account.playlistId}`);
+      await expect(modal).toBeVisible();
+      await expect(modal.getByRole('row').filter({ hasText: 'Windowlicker' })).toBeVisible();
+      if (running) {
+        await modal.getByRole('button', { name: 'Begin Analysis', exact: true }).click();
+        await expect.poll(() => starts).toBe(1);
+        await expect(modal.getByRole('button', { name: 'Cancel All', exact: true })).toBeVisible();
+      }
+      await modal.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(modal).not.toBeVisible();
+      if (running) {
+        await page
+          .locator(account.container)
+          .getByRole('button', { name: 'View Progress', exact: true })
+          .click();
+        await expect(modal.getByRole('button', { name: 'Cancel All', exact: true })).toBeVisible();
+        expect(starts).toBe(1);
+      } else {
+        await page
+          .locator(account.container)
+          .getByRole('button', { name: 'Sync / Download', exact: true })
+          .click();
+        await page
+          .locator(account.modal)
+          .getByRole('button', { name: /Download Missing Tracks/ })
+          .click();
+      }
+      await expect(modal).toBeVisible();
+      expect(missing).toEqual([]);
+    });
+  }
 }
 
 for (const account of ['ListenBrainz', 'Last.fm', 'SoulSync Discovery']) {
