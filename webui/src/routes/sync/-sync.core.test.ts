@@ -389,24 +389,12 @@ describe('M3U context prefixes', () => {
   });
 });
 
-/* ── formatDuration (differential vs BOTH vanilla twins) ──────────────────── */
+/* ── formatDuration (shared classic and native callers) ──────────────────── */
 
-describe('formatDuration (differential vs the load-order WINNER)', () => {
-  /**
-   * THREE vanilla declarations exist and they disagree: sync-spotify.js 1967
-   * has no falsy guard (undefined → 'NaN:NaN'), wishlist-tools.js 1575 guards
-   * to '--:--', sync-services.js 10062 guards to '0:00'. All are plain global
-   * function declarations, so index.html load order (sync-spotify →
-   * wishlist-tools → sync-services) makes the sync-services copy the ONE every
-   * runtime caller actually gets. The port matches the winner.
-   */
-  const servicesVanilla = lift<{ formatDuration: (ms: unknown) => string }>(
+describe('formatDuration (differential vs shared-helpers.js)', () => {
+  const sharedVanilla = lift<{ formatDuration: (ms: unknown) => string }>(
     ['formatDuration'],
-    SYNC_SERVICES,
-  );
-  const spotifyVanilla = lift<{ formatDuration: (ms: unknown) => string }>(
-    ['formatDuration'],
-    SYNC_SPOTIFY,
+    readFileSync(resolve(process.cwd(), 'static/shared-helpers.js'), 'utf8'),
   );
 
   const MATRIX = [
@@ -425,17 +413,10 @@ describe('formatDuration (differential vs the load-order WINNER)', () => {
     -1000,
   ];
 
-  it('matches the surviving sync-services copy over the matrix', () => {
+  it('matches the shared classic formatter over the matrix', () => {
     for (const ms of MATRIX) {
-      expect(formatDuration(ms as never), String(ms)).toBe(servicesVanilla.formatDuration(ms));
+      expect(formatDuration(ms as never), String(ms)).toBe(sharedVanilla.formatDuration(ms));
     }
-  });
-
-  it('documents the shadowed sync-spotify twin drift the differential caught', () => {
-    // The twins only disagree on the falsy guard; the port deliberately does
-    // NOT match the shadowed copy. If this starts failing, the twins changed.
-    expect(spotifyVanilla.formatDuration(undefined)).toBe('NaN:NaN');
-    expect(servicesVanilla.formatDuration(undefined)).toBe('0:00');
   });
 
   it('pins the shape as literals', () => {
