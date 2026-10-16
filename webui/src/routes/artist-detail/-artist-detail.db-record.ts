@@ -113,7 +113,7 @@ export interface JsonToken {
 }
 
 const JSON_TOKEN =
-  /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g;
+  /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g;
 
 /**
  * Split pretty-printed JSON into highlight tokens.
@@ -134,7 +134,7 @@ export function jsonHighlightTokens(value: unknown): JsonToken[] {
     if (index > lastIndex) tokens.push({ text: json.slice(lastIndex, index), className: null });
 
     let className = 'tok-num';
-    if (/^"/.test(text)) className = /:$/.test(text) ? 'tok-key' : 'tok-str';
+    if (text.startsWith('"')) className = text.endsWith(':') ? 'tok-key' : 'tok-str';
     else if (/true|false/.test(text)) className = 'tok-bool';
     else if (/null/.test(text)) className = 'tok-null';
 
