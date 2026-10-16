@@ -59,11 +59,10 @@ type PhaseMapVanilla = {
   getActionButtonText: (p: string) => string;
   getPhaseText: (p: string) => string;
   getPhaseColor: (p: string) => string;
-  getProgressWidth: (info: Record<string, unknown>) => number;
 };
 
 const phaseVanilla = lift<PhaseMapVanilla>(
-  ['getActionButtonText', 'getPhaseText', 'getPhaseColor', 'getProgressWidth'],
+  ['getActionButtonText', 'getPhaseText', 'getPhaseColor'],
   SYNC_SPOTIFY,
 );
 
@@ -113,25 +112,19 @@ describe('phase maps (differential vs sync-spotify.js)', () => {
   });
 });
 
-describe('progressWidth (differential vs sync-spotify.js)', () => {
-  const CASES = [
-    { phase: 'fresh', spotify_total: 100, spotify_matches: 50 },
-    { phase: 'discovered', spotify_total: 0, spotify_matches: 0 },
-    { phase: 'discovered', spotify_total: 3, spotify_matches: 1 },
-    { phase: 'discovered', spotify_total: 3, spotify_matches: 2 },
-    { phase: 'syncing', spotify_total: 7, spotify_matches: 7 },
-    { phase: 'discovered', spotify_total: 10, spotify_matches: 15 }, // matches > total
-    { phase: 'discovered', spotify_total: 4, spotify_matches: -1 },
-    { phase: 'discovered' }, // undefined totals — the NaN case
-    { phase: 'downloading', spotify_matches: 5 },
-  ];
-
-  it('matches the vanilla over the matrix, NaN included', () => {
-    for (const info of CASES) {
-      const ours = progressWidth(info as never);
-      const theirs = phaseVanilla.getProgressWidth(info as never);
-      expect(Object.is(ours, theirs), JSON.stringify(info)).toBe(true);
-    }
+describe('progressWidth', () => {
+  it.each([
+    [{ phase: 'fresh', spotify_total: 100, spotify_matches: 50 }, 0],
+    [{ phase: 'discovered', spotify_total: 0, spotify_matches: 0 }, 0],
+    [{ phase: 'discovered', spotify_total: 3, spotify_matches: 1 }, 33],
+    [{ phase: 'discovered', spotify_total: 3, spotify_matches: 2 }, 67],
+    [{ phase: 'syncing', spotify_total: 7, spotify_matches: 7 }, 100],
+    [{ phase: 'discovered', spotify_total: 10, spotify_matches: 15 }, 150],
+    [{ phase: 'discovered', spotify_total: 4, spotify_matches: -1 }, -25],
+    [{ phase: 'discovered' }, NaN],
+    [{ phase: 'downloading', spotify_matches: 5 }, NaN],
+  ] as [Parameters<typeof progressWidth>[0], number][])('formats %j as %s', (info, expected) => {
+    expect(progressWidth(info)).toBe(expected);
   });
 
   it('pins the arithmetic as literals', () => {
