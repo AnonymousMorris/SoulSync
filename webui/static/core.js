@@ -22,7 +22,6 @@ let streamPollingInterval = 1000; // Start with 1-second polling
 const maxStreamPollingRetries = 10;
 let dbStatsInterval = null;
 let dbUpdateStatusInterval = null;
-let duplicateCleanerStatusInterval = null;
 let wishlistCountInterval = null;
 let wishlistCountdownInterval = null;  // Countdown timer for wishlist overview modal
 
