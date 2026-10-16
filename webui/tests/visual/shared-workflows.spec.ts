@@ -141,6 +141,9 @@ for (const account of [
         await modal.getByRole('button', { name: 'Begin Analysis', exact: true }).click();
         await expect.poll(() => starts).toBe(1);
         await expect(modal.getByRole('button', { name: 'Cancel All', exact: true })).toBeVisible();
+        await expect(modal.locator(`#analysis-progress-text-${account.playlistId}`)).toHaveText(
+          /Queued.*waiting for worker/,
+        );
       }
       await modal.getByRole('button', { name: 'Close', exact: true }).click();
       await expect(modal).not.toBeVisible();
@@ -265,7 +268,22 @@ for (const account of ['ListenBrainz', 'Last.fm', 'SoulSync Discovery']) {
 }
 
 test('Beatport genre browsing survives search, navigation and reopening', async ({ page }) => {
+  const release = {
+    title: 'Windowlicker',
+    artists_string: 'Aphex Twin',
+    label: 'Warp',
+    url: '/release/windowlicker/1234',
+  };
   const missing = await open(page, '/sync', [
+    http.get('*/api/beatport/genre/tech-house/11/hero', () =>
+      HttpResponse.json({ success: true, releases: [release] }),
+    ),
+    http.get('*/api/beatport/genre/tech-house/11/top-10-lists', () =>
+      HttpResponse.json({ success: true, beatport_top10: [], hype_top10: [] }),
+    ),
+    http.get('*/api/beatport/genre/tech-house/11/top-10-releases', () =>
+      HttpResponse.json({ success: true, releases: [release] }),
+    ),
     http.get('*/api/beatport/genres', () =>
       HttpResponse.json({
         genres: [
@@ -283,6 +301,9 @@ test('Beatport genre browsing survives search, navigation and reopening', async 
   await expect(browser.getByText('Techno', { exact: true })).not.toBeVisible();
   await browser.getByText('Tech House', { exact: true }).click();
   await expect(browser.getByRole('heading', { name: 'Tech House', exact: true })).toBeVisible();
+  await expect(browser.locator('#genre-hero-slider-container')).toContainText('Windowlicker');
+  await expect(browser.locator('#genre-top10-lists-container')).toContainText('Tech House Top 10 Lists');
+  await expect(browser.locator('#genre-top10-releases-container')).toContainText('Windowlicker');
   await browser.getByRole('button', { name: 'Back to Genres' }).click();
   await page.keyboard.press('Escape');
   await expect(browser).not.toBeVisible();
