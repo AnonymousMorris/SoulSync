@@ -1,5 +1,5 @@
 import { HttpResponse, http } from 'msw';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { server } from '@/test/msw';
 
