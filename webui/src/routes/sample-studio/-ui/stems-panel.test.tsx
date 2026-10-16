@@ -132,7 +132,6 @@ describe('StemsPanel', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = input instanceof Request ? input.url : String(input);
         const method = input instanceof Request ? input.method : (init?.method ?? 'GET');
         const running = { track_id: '7', status: 'running', stems: [], stems_available: true };
         if (method === 'POST') {
