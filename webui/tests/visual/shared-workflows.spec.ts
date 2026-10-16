@@ -85,6 +85,8 @@ test('dashboard Auto Sync replaces an hourly schedule with a weekly schedule', a
             source: 'tidal',
             source_playlist_id: 'evening-1',
             track_count: 1,
+            total_count: 1,
+            in_library_count: 0,
           },
         ]),
       ),
@@ -154,6 +156,9 @@ test('dashboard Auto Sync replaces an hourly schedule with a weekly schedule', a
   await expect(activePanel).toContainText('Fri @ 18:30');
   await manager.locator('.auto-sync-close').first().click();
   await expect(manager).not.toBeVisible();
+  await expect(page.locator('article').filter({ hasText: 'Playlist sync' })).toContainText(
+    'Evening mix',
+  );
   expect(missing).toEqual([]);
 });
 
