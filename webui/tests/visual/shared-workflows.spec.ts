@@ -154,6 +154,33 @@ for (const account of ['ListenBrainz', 'Last.fm', 'SoulSync Discovery']) {
   });
 }
 
+test('Beatport genre browsing survives search, navigation and reopening', async ({ page }) => {
+  const missing = await open(page, '/sync', [
+    http.get('*/api/beatport/genres', () =>
+      HttpResponse.json({
+        genres: [
+          { id: 11, slug: 'tech-house', name: 'Tech House' },
+          { id: 6, slug: 'techno', name: 'Techno' },
+        ],
+      }),
+    ),
+  ]);
+  await page.getByRole('tab', { name: 'Beatport', exact: true }).click();
+  await page.getByRole('button', { name: 'Browse by Genre' }).click();
+  const browser = page.locator('#genre-browser-modal');
+  await expect(browser.getByText('Tech House', { exact: true })).toBeVisible();
+  await browser.getByPlaceholder('Search genres...').fill('house');
+  await expect(browser.getByText('Techno', { exact: true })).not.toBeVisible();
+  await browser.getByText('Tech House', { exact: true }).click();
+  await expect(browser.getByRole('heading', { name: 'Tech House', exact: true })).toBeVisible();
+  await browser.getByRole('button', { name: 'Back to Genres' }).click();
+  await page.keyboard.press('Escape');
+  await expect(browser).not.toBeVisible();
+  await page.getByRole('button', { name: 'Browse by Genre' }).click();
+  await expect(browser.getByPlaceholder('Search genres...')).toBeVisible();
+  expect(missing).toEqual([]);
+});
+
 test('Tools help dismisses and the database updater starts', async ({ page }) => {
   let started = false;
   const missing = await open(page, '/tools', [
