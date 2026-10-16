@@ -8,7 +8,8 @@ export interface AutomationLogLine {
 }
 
 export interface AutomationRunState {
-  status?: 'running' | 'finished' | 'error' | string;
+  /** Usually running, finished, or error; allow new server statuses. */
+  status?: string;
   progress?: number;
   phase?: string;
   log?: AutomationLogLine[];
