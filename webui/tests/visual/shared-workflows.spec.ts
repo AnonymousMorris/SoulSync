@@ -4,12 +4,12 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 import { routeHandlers, shellHandlers } from './fixtures';
 import { installShell, ORIGIN } from './harness';
 
-async function open(page: Page, path: string, handlers: RequestHandler[] = []) {
+async function open(page: Page, path: string, handlers: RequestHandler[] = [], fixedTime = true) {
   await page.addInitScript(() => {
     localStorage.setItem('soulsync_setup_welcome_dismissed', '1');
     localStorage.setItem('soulsync_helper_discovered', '1');
   });
-  await page.clock.setFixedTime(new Date('2025-01-13T10:00:00Z'));
+  if (fixedTime) await page.clock.setFixedTime(new Date('2025-01-13T10:00:00Z'));
   const missing = await installShell(page, [...handlers, ...shellHandlers]);
   await page.goto(`${ORIGIN}${path}`);
   await expect(page.locator('#webui-react-root')).toBeAttached();
@@ -20,7 +20,9 @@ test.afterEach(async ({ page }) => {
   expect(await page.pageErrors()).toEqual([]);
 });
 
-test('dashboard Auto Sync stays React-owned after running from playlist details', async ({ page }) => {
+test('dashboard Auto Sync stays React-owned after running from playlist details', async ({
+  page,
+}) => {
   let runs = 0;
   let statusReads = 0;
   const playlist = {
@@ -47,8 +49,11 @@ test('dashboard Auto Sync stays React-owned after running from playlist details'
       return HttpResponse.json({ status: 'running', progress: 25, phase: 'Discovering' });
     }),
   ]);
-  await page.locator('article').filter({ hasText: 'Playlist sync' })
-    .getByRole('button', { name: 'Manage', exact: true }).click();
+  await page
+    .locator('article')
+    .filter({ hasText: 'Playlist sync' })
+    .getByRole('button', { name: 'Manage', exact: true })
+    .click();
   const manager = page.locator('#auto-sync-schedule-modal');
   await expect(manager.locator('.auto-sync-eyebrow')).toHaveCount(0);
   await manager.getByRole('button', { name: 'Details', exact: true }).click();
@@ -60,6 +65,94 @@ test('dashboard Auto Sync stays React-owned after running from playlist details'
   await expect(manager.locator('.auto-sync-eyebrow')).toHaveCount(0);
   await details.getByRole('button', { name: 'Close', exact: true }).last().click();
   await manager.locator('.auto-sync-close').click();
+  await expect(manager).not.toBeVisible();
+  expect(missing).toEqual([]);
+});
+
+test('dashboard Auto Sync replaces an hourly schedule with a weekly schedule', async ({ page }) => {
+  let automations: Record<string, unknown>[] = [];
+  const writes: string[] = [];
+  let nextId = 100;
+  const missing = await open(
+    page,
+    '/dashboard',
+    [
+      http.get('*/api/mirrored-playlists', () =>
+        HttpResponse.json([
+          {
+            id: 42,
+            name: 'Evening mix',
+            source: 'tidal',
+            source_playlist_id: 'evening-1',
+            track_count: 1,
+          },
+        ]),
+      ),
+      http.get('*/api/automations', () => HttpResponse.json(automations)),
+      http.get('*/api/playlist-pipeline/history', () =>
+        HttpResponse.json({ history: [], total: 0 }),
+      ),
+      http.post('*/api/automations', async ({ request }) => {
+        const payload = (await request.json()) as Record<string, unknown>;
+        const id = ++nextId;
+        automations.push({ ...payload, id });
+        writes.push(`create:${payload.trigger_type}`);
+        return HttpResponse.json({ success: true, id });
+      }),
+      http.delete('*/api/automations/:id', ({ params }) => {
+        automations = automations.filter((a) => String(a.id) !== params.id);
+        writes.push(`delete:${params.id}`);
+        return HttpResponse.json({ success: true });
+      }),
+    ],
+    false,
+  );
+  await page
+    .locator('article')
+    .filter({ hasText: 'Playlist sync' })
+    .getByRole('button', { name: 'Manage', exact: true })
+    .click();
+  const manager = page.locator('#auto-sync-schedule-modal');
+  const activePanel = manager.locator('.auto-sync-tab-panel.active');
+  await activePanel.getByRole('button', { name: 'Evening mix', exact: false }).click();
+  await page
+    .locator('.auto-sync-pick-menu')
+    .getByRole('button', { name: 'Every 12 hours', exact: true })
+    .click();
+  await expect
+    .poll(() => automations)
+    .toMatchObject([
+      {
+        id: 101,
+        owned_by: 'auto_sync',
+        trigger_type: 'schedule',
+        trigger_config: { interval: 12, unit: 'hours' },
+      },
+    ]);
+  await expect(activePanel.locator('.auto-sync-lane[data-hours="12"]')).toContainText(
+    'Evening mix',
+  );
+  await manager.getByRole('button', { name: 'Weekly Board', exact: true }).click();
+  await activePanel.getByRole('button', { name: 'Evening mix', exact: false }).click();
+  const editor = manager.locator('.auto-sync-weekly-editor');
+  await editor.getByRole('button', { name: 'Fri', exact: true }).click();
+  await editor.getByLabel('Time', { exact: true }).fill('18:30');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(editor).not.toBeVisible();
+  await expect
+    .poll(() => automations)
+    .toMatchObject([
+      {
+        id: 102,
+        trigger_type: 'weekly_time',
+        trigger_config: { time: '18:30', days: ['fri'] },
+        action_config: { playlist_id: '42' },
+      },
+    ]);
+  expect(automations).toHaveLength(1);
+  expect(writes).toEqual(['create:schedule', 'delete:101', 'create:weekly_time']);
+  await expect(activePanel).toContainText('Fri @ 18:30');
+  await manager.locator('.auto-sync-close').first().click();
   await expect(manager).not.toBeVisible();
   expect(missing).toEqual([]);
 });
@@ -346,7 +439,9 @@ test('Beatport genre browsing survives search, navigation and reopening', async 
   await browser.getByText('Tech House', { exact: true }).click();
   await expect(browser.getByRole('heading', { name: 'Tech House', exact: true })).toBeVisible();
   await expect(browser.locator('#genre-hero-slider-container')).toContainText('Windowlicker');
-  await expect(browser.locator('#genre-top10-lists-container')).toContainText('Tech House Top 10 Lists');
+  await expect(browser.locator('#genre-top10-lists-container')).toContainText(
+    'Tech House Top 10 Lists',
+  );
   await expect(browser.locator('#genre-top10-releases-container')).toContainText('Windowlicker');
   await browser.getByRole('button', { name: 'Back to Genres' }).click();
   await page.keyboard.press('Escape');
