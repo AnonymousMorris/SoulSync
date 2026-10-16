@@ -148,7 +148,8 @@ export interface LastfmListeningImportStatus {
   authenticated_user_available?: boolean;
   username?: string | null;
   running?: boolean;
-  status?: 'idle' | 'running' | 'complete' | 'error' | 'cancelled' | 'skipped' | string;
+  /** Known statuses include idle, running, complete, error, cancelled, and skipped. */
+  status?: string;
   phase?: string | null;
   progress?: number | null;
   imported?: number;
@@ -174,7 +175,8 @@ export interface ListenbrainzListeningImportStatus {
   authenticated_user_available?: boolean;
   username?: string | null;
   running?: boolean;
-  status?: 'idle' | 'running' | 'complete' | 'error' | 'cancelled' | 'skipped' | string;
+  /** Known statuses include idle, running, complete, error, cancelled, and skipped. */
+  status?: string;
   phase?: string | null;
   progress?: number | null;
   imported?: number;
