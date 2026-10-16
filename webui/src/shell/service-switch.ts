@@ -458,7 +458,7 @@ function _ssDownloadPanel(d: SsActiveSources, editable: boolean): string {
     .map((c, i) => {
       const info = _ssDownloadInfo(c.id);
       const media = info.logo
-        ? `<img class="ss-chain-logo" src="${info.logo}" alt="" onerror="this.outerHTML='<span class=\'ss-card-emoji\'>${info.emoji || '⬇️'}</span>'">`
+        ? `<img class="ss-chain-logo" src="${info.logo}" alt="" onerror="this.outerHTML='<span class='ss-card-emoji'>${info.emoji || '⬇️'}</span>'">`
         : `<span class="ss-card-emoji">${info.emoji || '⬇️'}</span>`;
       const chip =
         c.ready === true
