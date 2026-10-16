@@ -31,7 +31,7 @@ test('dashboard Auto Sync stays React-owned after running from playlist details'
     source: 'tidal',
     source_playlist_id: 'evening-1',
     track_count: 1,
-    pipeline_state: { status: 'finished', progress: 100 },
+    pipeline_state: { status: 'finished', progress: 100, phase: '' },
     tracks: [{ track_name: 'Windowlicker', artist_name: 'Aphex Twin', duration_ms: 367000 }],
   };
   const missing = await open(page, '/', [
@@ -42,11 +42,13 @@ test('dashboard Auto Sync stays React-owned after running from playlist details'
     http.post('*/api/mirrored-playlists/42/pipeline/run', async ({ request }) => {
       expect(await request.json()).toEqual({ skip_wishlist: false });
       runs += 1;
-      return HttpResponse.json({ state: { status: 'running', progress: 0 } });
+      playlist.pipeline_state = { status: 'running', progress: 0, phase: 'Starting' };
+      return HttpResponse.json({ state: playlist.pipeline_state });
     }),
     http.get('*/api/mirrored-playlists/42/pipeline/status', () => {
       statusReads += 1;
-      return HttpResponse.json({ status: 'running', progress: 25, phase: 'Discovering' });
+      playlist.pipeline_state = { status: 'running', progress: 25, phase: 'Discovering' };
+      return HttpResponse.json(playlist.pipeline_state);
     }),
   ]);
   await page
@@ -64,6 +66,7 @@ test('dashboard Auto Sync stays React-owned after running from playlist details'
   await expect.poll(() => statusReads).toBeGreaterThan(0);
   await expect(manager.locator('.auto-sync-eyebrow')).toHaveCount(0);
   await details.getByRole('button', { name: 'Close', exact: true }).last().click();
+  await expect(manager.locator('.auto-sync-monitor-phase')).toHaveText('Discovering');
   await manager.locator('.auto-sync-close').click();
   await expect(manager).not.toBeVisible();
   expect(missing).toEqual([]);
